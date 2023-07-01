@@ -111,6 +111,8 @@ tk_caja       db  04,"caja"
 tk_objetivo   db  08,"objetivo"
 tk_coma       db  01,","
 ;;
+casilla_act   db  05
+;;
 numero        db  5 dup (30)
 .CODE
 .STARTUP
@@ -599,6 +601,14 @@ adaptar_coordenada:
 		mul DL
 		ret
 		
+;;;; Guardar tipo de casilla anterior
+;;    -DL -> codigo numerico del elemento
+;;    
+;;guardar_casilla_anterior:
+;;		;; mov DI, [casilla_ant]
+;;		;; mov DI, DL
+;;		mov [casilla_ant], DL
+;;		ret
 ;; colocar_en_mapa - coloca un elemento en el mapa
 ;; ENTRADA:
 ;;    - DL -> código numérico del elemento
@@ -881,7 +891,14 @@ mover_jugador_arr:
 		pop AX
 		;; DL <- elemento en mapa
 		cmp DL, PARED
-		je hay_pared_arriba
+		je hay_pared
+		cmp DL, CAJA
+		je hay_caja_arriba
+		cmp DL, OBJETIVO
+		je hay_objetivo_arriba
+		cmp DL, SUELO
+		je hay_suelo_arriba
+hay_suelo_arriba:
 		mov [yJugador], AL
 		;;
 		mov DL, JUGADOR
@@ -889,12 +906,66 @@ mover_jugador_arr:
 		call colocar_en_mapa
 		pop AX
 		;;
-		mov DL, SUELO
+		mov DL, casilla_act
 		inc AL
 		call colocar_en_mapa
+		;; guardamos el objeto de la casilla actual en casilla anterior
+		push DX
+		mov DL, [SUELO]
+		mov [casilla_act], DL
+		pop DX
 		ret
-hay_pared_arriba:
+hay_objetivo_arriba:
+		;; movemos la y del jugador de la casilla
+		mov [yJugador], AL
+		;; en este punto DL es aun la casilla siguiente
+		mov DL, JUGADOR
+		push AX
+		call colocar_en_mapa
+		pop AX
+		;;
+		mov DL, casilla_act
+		inc AL
+		call colocar_en_mapa
+		;; guardamos el objeto de la casilla actual en casilla anterior
+		push DX
+		mov DL, [OBJETIVO]
+		mov [casilla_act], DL
+		pop DX
 		ret
+hay_caja_arriba:
+		dec AL
+		push AX
+		call obtener_de_mapa
+		pop AX
+		cmp DL, PARED
+		je hay_pared
+		cmp DL, CAJA
+		je hay_pared
+		;; Se puede mover la caja, movemos la caja
+		mov DL, CAJA
+		push AX
+		call colocar_en_mapa
+		pop AX
+		inc AL
+		;; actualizamos la posicion y del jugador
+		mov [yJugador], AL
+		;;movemos al jugador
+		mov DL, JUGADOR
+		push AX
+		call colocar_en_mapa
+		pop AX
+		;;
+		mov DL, casilla_act
+		inc AL
+		call colocar_en_mapa
+		;; guardamos el objeto de la casilla actual en casilla anterior
+		push DX
+		mov DL, [SUELO]
+		mov [casilla_act], DL
+		pop DX
+		ret
+
 mover_jugador_aba:
 		mov AH, [xJugador]
 		mov AL, [yJugador]
@@ -904,7 +975,16 @@ mover_jugador_aba:
 		pop AX
 		;; DL <- elemento en mapa
 		cmp DL, PARED
-		je hay_pared_abajo
+		je hay_pared
+		;; si hay caja verificamos que se pueda mover
+		cmp DL, CAJA
+		je hay_caja_abajo
+		cmp DL, OBJETIVO
+		je hay_objetivo_abajo
+		cmp DL, SUELO
+		je hay_suelo_abajo
+hay_suelo_abajo:
+		;; mover al jugador
 		mov [yJugador], AL
 		;;
 		mov DL, JUGADOR
@@ -912,12 +992,66 @@ mover_jugador_aba:
 		call colocar_en_mapa
 		pop AX
 		;;
-		mov DL, SUELO
+		mov DL, casilla_act
 		dec AL
 		call colocar_en_mapa
+		;; guardamos el objeto de la casilla actual en casilla anterior
+		push DX
+		mov DL, [SUELO]
+		mov [casilla_act], DL
+		pop DX
 		ret
-hay_pared_abajo:
+hay_objetivo_abajo:
+		;; movemos al jugador de la casilla
+		mov [yJugador], AL
+		;;
+		mov DL, JUGADOR
+		push AX
+		call colocar_en_mapa
+		pop AX
+		;;
+		mov DL, casilla_act
+		dec AL
+		call colocar_en_mapa
+		;; guardamos el objeto de la casilla actual en casilla anterior
+		push DX
+		mov DL, [OBJETIVO]
+		mov [casilla_act], DL
+		pop DX
 		ret
+hay_caja_abajo:
+		inc AL
+		push AX
+		call obtener_de_mapa
+		pop AX
+		cmp DL, PARED
+		je hay_pared
+		cmp DL, CAJA
+		je hay_pared
+		;; Se puede mover la caja, movemos la caja
+		mov DL, CAJA
+		push AX
+		call colocar_en_mapa
+		pop AX
+		dec AL
+		;; actualizamos la posicion y del jugador
+		mov [yJugador], AL
+		;;movemos al jugador
+		mov DL, JUGADOR
+		push AX
+		call colocar_en_mapa
+		pop AX
+		;;
+		mov DL, casilla_act
+		dec AL
+		call colocar_en_mapa
+		;; guardamos el objeto de la casilla actual en casilla anterior
+		push DX
+		mov DL, [SUELO]
+		mov [casilla_act], DL
+		pop DX
+		ret
+
 mover_jugador_izq:
 		mov AH, [xJugador]
 		mov AL, [yJugador]
@@ -927,7 +1061,16 @@ mover_jugador_izq:
 		pop AX
 		;; DL <- elemento en mapa
 		cmp DL, PARED
-		je hay_pared_izquierda
+		je hay_pared
+		;; si hay caja verificamos que se pueda mover
+		cmp DL, CAJA
+		je hay_caja_izquierda
+		cmp DL, OBJETIVO
+		je hay_objetivo_izquierda
+		cmp DL, SUELO
+		je hay_suelo_izquierda
+hay_suelo_izquierda:
+		;; mover al jugador
 		mov [xJugador], AH
 		;;
 		mov DL, JUGADOR
@@ -935,12 +1078,66 @@ mover_jugador_izq:
 		call colocar_en_mapa
 		pop AX
 		;;
-		mov DL, SUELO
+		mov DL, casilla_act
 		inc AH
 		call colocar_en_mapa
+		;; guardamos el objeto de la casilla actual en casilla anterior
+		push DX
+		mov DL, [SUELO]
+		mov [casilla_act], DL
+		pop DX
 		ret
-hay_pared_izquierda:
+hay_objetivo_izquierda:
+		;; movemos al jugador de la casilla
+		mov [xJugador], AH
+		;;
+		mov DL, JUGADOR
+		push AX
+		call colocar_en_mapa
+		pop AX
+		;;
+		mov DL, casilla_act
+		inc AH
+		call colocar_en_mapa
+		;; guardamos el objeto de la casilla actual en casilla anterior
+		push DX
+		mov DL, [OBJETIVO]
+		mov [casilla_act], DL
+		pop DX
 		ret
+hay_caja_izquierda:
+		dec AH
+		push AX
+		call obtener_de_mapa
+		pop AX
+		cmp DL, PARED
+		je hay_pared
+		cmp DL, CAJA
+		je hay_pared
+		;; Se puede mover la caja, movemos la caja
+		mov DL, CAJA
+		push AX
+		call colocar_en_mapa
+		pop AX
+		inc AH
+		;; actualizamos la posicion x del jugador
+		mov [xJugador], AH
+		;;movemos al jugador
+		mov DL, JUGADOR
+		push AX
+		call colocar_en_mapa
+		pop AX
+		;;
+		mov DL, casilla_act
+		inc AH
+		call colocar_en_mapa
+		;; guardamos el objeto de la casilla actual en casilla anterior
+		push DX
+		mov DL, [SUELO]
+		mov [casilla_act], DL
+		pop DX
+		ret
+
 mover_jugador_der:
 		mov AH, [xJugador]
 		mov AL, [yJugador]
@@ -950,7 +1147,16 @@ mover_jugador_der:
 		pop AX
 		;; DL <- elemento en mapa
 		cmp DL, PARED
-		je hay_pared_derecha
+		je hay_pared
+		;; si hay caja verificamos que se pueda mover
+		cmp DL, CAJA
+		je hay_caja_derecha
+		cmp DL, OBJETIVO
+		je hay_objetivo_derecha
+		cmp DL, SUELO
+		je hay_suelo_derecha
+hay_suelo_derecha:
+		;; mover al jugador
 		mov [xJugador], AH
 		;;
 		mov DL, JUGADOR
@@ -958,11 +1164,66 @@ mover_jugador_der:
 		call colocar_en_mapa
 		pop AX
 		;;
-		mov DL, SUELO
+		mov DL, casilla_act
 		dec AH
 		call colocar_en_mapa
+		; guardamos el objeto de la casilla actual en casilla anterior
+		push DX
+		mov DL, [SUELO]
+		mov [casilla_act], DL
+		pop DX
 		ret
-hay_pared_derecha:
+hay_objetivo_derecha:
+		;; movemos al jugador de la casilla
+		mov [xJugador], AH
+		;;
+		mov DL, JUGADOR
+		push AX
+		call colocar_en_mapa
+		pop AX
+		;;
+		mov DL, casilla_act
+		dec AH
+		call colocar_en_mapa
+		;; guardamos el objeto de la casilla actual en casilla anterior
+		push DX
+		mov DL, [OBJETIVO]
+		mov [casilla_act], DL
+		pop DX
+		ret
+hay_caja_derecha:
+		inc AH
+		push AX
+		call obtener_de_mapa
+		pop AX
+		cmp DL, PARED
+		je hay_pared
+		cmp DL, CAJA
+		je hay_pared
+		;; Se puede mover la caja, movemos la caja
+		mov DL, CAJA
+		push AX
+		call colocar_en_mapa
+		pop AX
+		dec AH
+		;; actualizamos la posicion x del jugador
+		mov [xJugador], AH
+		;;movemos al jugador
+		mov DL, JUGADOR
+		push AX
+		call colocar_en_mapa
+		pop AX
+		;;
+		mov DL, casilla_act
+		dec AH
+		call colocar_en_mapa
+		;; guardamos el objeto de la casilla actual en casilla anterior
+		push DX
+		mov DL, [SUELO]
+		mov [casilla_act], DL
+		pop DX
+		ret
+hay_pared:
 		ret
 fin_entrada_juego:
 		ret
